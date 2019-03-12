@@ -1,26 +1,57 @@
-// server.js
-// load the server resource and route GET method
-const server = require('server')
+// app.js
+var express    = require('express');
+var app        = express();
+var cors = require('cors');
+var bodyParser = require('body-parser');
+// var morgan     = require('morgan');
+var port       = process.env.PORT || 5000; 
 
-// const { get } = require('server/router')
-const { get, socket } = require('server/router')
+// Attaching socket.io
+var server = require('http').createServer(app);
+var io = require('socket.io')(server);
+app.set('socketio', io); 
+app.set('server', server);
+var whitelist = ['https://concept-35ade.firebaseapp.com', 'localhost:8080'];
+var corsOptions = {
+ origin: function(origin, callback){
+   var originIsWhitelisted = whitelist.indexOf(origin) !== -1;
+   callback(null, originIsWhitelisted);
+ }
+};
 
-// get server port from environment or default to 3000
-const port = process.env.PORT || 5000
+app.use(cors(corsOptions));
 
-server({ port }, [
-  get('/', ctx => '<h1>Hello you!</h1>'),
-  socket('message', ctx => {
-    // Send the message to every socket
-    console.log("got message: ", ctx.data)
-    ctx.io.emit('message', ctx.data)
-  }),
-  socket('connect', ctx => {
-    console.log('client connected', Object.keys(ctx.io.sockets.sockets))
-    ctx.io.emit('count', {msg: 'HI U', count: Object.keys(ctx.io.sockets.sockets).length})
-  })
-])
-  .then(() => console.log(`Server running at http://localhost:${port}`))
+// configure body parser
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.json());
+
+app.get('server').listen(port);
+
+
+// // --------------------------------------------------------------- //
+// // server.js
+// // load the server resource and route GET method
+// const server = require('server')
+
+// // const { get } = require('server/router')
+// const { get, socket } = require('server/router')
+
+// // get server port from environment or default to 3000
+// const port = process.env.PORT || 5000
+
+// server({ port }, [
+//   get('/', ctx => '<h1>Hello you!</h1>'),
+//   socket('message', ctx => {
+//     // Send the message to every socket
+//     console.log("got message: ", ctx.data)
+//     ctx.io.emit('message', ctx.data)
+//   }),
+//   socket('connect', ctx => {
+//     console.log('client connected', Object.keys(ctx.io.sockets.sockets))
+//     ctx.io.emit('count', {msg: 'HI U', count: Object.keys(ctx.io.sockets.sockets).length})
+//   })
+// ])
+//   .then(() => console.log(`Server running at http://localhost:${port}`))
 
 
 // --------------------------------------------------------------- //
