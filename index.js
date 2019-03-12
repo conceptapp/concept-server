@@ -9,6 +9,18 @@ var port       = process.env.PORT || 5000;
 // Attaching socket.io
 var server = require('http').createServer(app);
 var io = require('socket.io')(server);
+// io.on('connection', client => {
+// 	client.on('event', data => { console.log(data) })
+// 	client.on('disconnect'), () => { console.log("client disconnected") }
+// })
+io.on('connection', (socket) => {
+	console.log("client connected")
+
+	socket.on('message', (data) => {
+		console.log(data)
+		io.sockets.emit('message', data)
+	})
+})
 app.set('socketio', io); 
 app.set('server', server);
 var whitelist = ['https://concept-35ade.firebaseapp.com', 'localhost:8080'];
