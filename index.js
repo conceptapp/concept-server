@@ -9,6 +9,44 @@ var port       = process.env.PORT || 5000;
 var server = require('http').createServer(app);
 var io = require('socket.io')(server);
 
+/* Connect the database */
+const { Pool } = require('pg');
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: true
+});
+
+
+// create tables
+express()
+  .get('/db', async (req, res) => {
+    try {
+      const client = await pool.connect()
+      const result = await client.query('SELECT * FROM test_table');
+      const results = { 'results': (result) ? result.rows : null};
+      res.render('pages/db', results );
+      client.release();
+    } catch (err) {
+      console.error(err);
+      res.send("Error " + err);
+    }
+  })
+  .get('/db2', async (req, res) => {
+  try {
+    var myQuery = 'CREATE TABLE game_rooms (id serial PRIMARY KEY, name VARCHAR (40), count INTEGER);'
+    const client = await pool.connect()
+    const result = await client.query(myQuery);
+    const results = { 'results': (result) ? result.rows : null};
+    res.send('Result of db query: ', results );
+    client.release();
+  } catch (err) {
+    console.error(err);
+    res.send("Error " + err);
+  }
+})
+  .get('/', (req, res) => res.send('just working'))
+  .listen(port, () => console.log(`Listening on ${ port }`))
+
 
 /* Concept server real logic */
 var clients = [];
@@ -97,4 +135,4 @@ app.use(cors(corsOptions));
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
-app.get('server').listen(port);
+// app.get('server').listen(port);
