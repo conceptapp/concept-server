@@ -3,24 +3,72 @@ var express    = require('express');
 var app        = express();
 var cors = require('cors');
 var bodyParser = require('body-parser');
-// var morgan     = require('morgan');
 var port       = process.env.PORT || 5000; 
 
 // Attaching socket.io
 var server = require('http').createServer(app);
 var io = require('socket.io')(server);
-// io.on('connection', client => {
-// 	client.on('event', data => { console.log(data) })
-// 	client.on('disconnect'), () => { console.log("client disconnected") }
-// })
+var clients = [];
+var game_rooms = [];
+
+function join_game (socket, data) {
+  console.log('joining game: ', data)
+  // current client (socket) is joining the game room
+  clients[socket.id]['game_room'] = data.game_room
+  socket.join(data.game_room)
+  // one more player in the room
+  game_rooms[data.game_room]++
+  io.sockets.emit('game_rooms', game_rooms)
+}
+
 io.on('connection', (socket) => {
 	console.log("client connected")
+	console.log(socket.id)
+	clients[socket.id] = { }
 
-	socket.on('message', (data) => {
+	socket.on('create_game', (data) => {
 		console.log(data)
-		io.sockets.emit('message', data)
+    // append the game_room to the array if doesn't exist yet
+    if (data.game_room in game_rooms) {
+      join_game(socket, data)
+    } else {
+      // initiate the counter of clients to 1
+      game_rooms[data.game_room] = 1
+      clients[socket.id]['game_room'] = data.game_room
+      socket.join(data.game_room)
+    }
+		io.sockets.emit('game_rooms', game_rooms)
+	})
+
+  socket.on('join_game', (data) => {
+    console.log('called socket joined game: ', data)
+    join_game(data)
+  })
+
+  socket.on('leave_game', (data) => {
+    console.log('called socket leave game: ', data)
+    // current client (socket) is leaving the game room
+    socket.leave(clients[socket.id]['game_room'])
+    clients[socket.id]['game_room'] = ''
+    // remove a player from the room and delete room if no more players
+    game_rooms[data.game_room]--
+    if (game_rooms[data.game_room] < 1) {
+      delete game_rooms[data.game_room]
+    }
+    io.sockets.emit('game_rooms', game_rooms)
+  })
+
+	// cards have been updated on one client
+	socket.on('update_cards_from_client', (data) => {
+		console.log('update_cards from client: ', data)
+    io.to(data.game_room).emit('update_cards_from_server', data)
+	})
+
+	socket.on('disconnect', () => { 
+		console.log("client disconnected") 
 	})
 })
+
 app.set('socketio', io); 
 app.set('server', server);
 var whitelist = ['https://concept-35ade.firebaseapp.com', 'localhost:8080'];
@@ -38,68 +86,3 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
 app.get('server').listen(port);
-
-
-// // --------------------------------------------------------------- //
-// // server.js
-// // load the server resource and route GET method
-// const server = require('server')
-
-// // const { get } = require('server/router')
-// const { get, socket } = require('server/router')
-
-// // get server port from environment or default to 3000
-// const port = process.env.PORT || 5000
-
-// server({ port }, [
-//   get('/', ctx => '<h1>Hello you!</h1>'),
-//   socket('message', ctx => {
-//     // Send the message to every socket
-//     console.log("got message: ", ctx.data)
-//     ctx.io.emit('message', ctx.data)
-//   }),
-//   socket('connect', ctx => {
-//     console.log('client connected', Object.keys(ctx.io.sockets.sockets))
-//     ctx.io.emit('count', {msg: 'HI U', count: Object.keys(ctx.io.sockets.sockets).length})
-//   })
-// ])
-//   .then(() => console.log(`Server running at http://localhost:${port}`))
-
-
-// --------------------------------------------------------------- //
-// // attempt with https://stackoverflow.com/questions/20093070/unable-to-create-cross-domain-websocket-connection-to-node-js-socket-io-server
-// app = require('express')();
-
-// app.use(function(req, res, next) {
-//   res.header('Access-Control-Allow-Origin', '*');
-//   res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
-//   res.header('Access-Control-Allow-Headers', 'Content-Type');
-//   return next();
-// });
-
-
-// //HTTP Server 
-// var express=require('express');
-// //Express instance
-// var app = express();
-
-// //ENABLE CORS
-// app.all('/', function(req, res, next) {
-//   res.header("Access-Control-Allow-Origin", "*");
-//   res.header("Access-Control-Allow-Headers", "X-Requested-With");
-//   next();
-//  });
-
-
-// const cool = require('cool-ascii-faces')
-// const express = require('express')
-// const path = require('path')
-// const PORT = process.env.PORT || 5000
-
-// express()
-//   .use(express.static(path.join(__dirname, 'public')))
-//   .set('views', path.join(__dirname, 'views'))
-//   .set('view engine', 'ejs')
-//   .get('/', (req, res) => res.render('pages/index'))
-//   .get('/cool', (req, res) => res.send(cool()))
-//   .listen(PORT, () => console.log(`Listening on ${ PORT }`))
