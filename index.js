@@ -8,54 +8,64 @@ var port       = process.env.PORT || 5000;
 // Attaching socket.io
 var server = require('http').createServer(app);
 var io = require('socket.io')(server);
+
+
+/* Concept server real logic */
 var clients = [];
-var game_rooms = [];
+var game_rooms = {};
 
 function join_game (socket, data) {
   console.log('joining game: ', data)
   // current client (socket) is joining the game room
-  clients[socket.id]['game_room'] = data.game_room
-  socket.join(data.game_room)
+  clients[socket.id]['game_room'] = data
+  socket.join(data)
   // one more player in the room
-  game_rooms[data.game_room]++
-  io.sockets.emit('game_rooms', game_rooms)
+  game_rooms[data]++
+  io.sockets.emit('update_game_rooms', game_rooms)
+}
+
+function leave_game (socket, data) {
+  // current client (socket) is leaving the game room
+  socket.leave(clients[socket.id]['game_room'])
+  clients[socket.id]['game_room'] = ''
+  // remove a player from the room and delete room if no more players
+  game_rooms[data]--
+  if (game_rooms[data] < 1) {
+    delete game_rooms[data]
+  }
+  io.sockets.emit('update_game_rooms', game_rooms)
 }
 
 io.on('connection', (socket) => {
-	console.log("client connected")
+	// console.log("client connected")
 	console.log(socket.id)
 	clients[socket.id] = { }
+  // io.sockets.emit('update_game_rooms', game_rooms)
+  io.to(socket.id).emit('update_game_rooms', game_rooms)
 
 	socket.on('create_game', (data) => {
-		console.log(data)
+		console.log('creating game: ', data)
     // append the game_room to the array if doesn't exist yet
-    if (data.game_room in game_rooms) {
+    if (data in game_rooms) {
       join_game(socket, data)
     } else {
       // initiate the counter of clients to 1
-      game_rooms[data.game_room] = 1
-      clients[socket.id]['game_room'] = data.game_room
-      socket.join(data.game_room)
+      game_rooms[data] = 1
+      clients[socket.id]['game_room'] = data
+      socket.join(data)
     }
-		io.sockets.emit('game_rooms', game_rooms)
+    console.log('game rooms: ', game_rooms)
+		io.sockets.emit('update_game_rooms', game_rooms)
 	})
 
   socket.on('join_game', (data) => {
     console.log('called socket joined game: ', data)
-    join_game(data)
+    join_game(socket, data)
   })
 
   socket.on('leave_game', (data) => {
     console.log('called socket leave game: ', data)
-    // current client (socket) is leaving the game room
-    socket.leave(clients[socket.id]['game_room'])
-    clients[socket.id]['game_room'] = ''
-    // remove a player from the room and delete room if no more players
-    game_rooms[data.game_room]--
-    if (game_rooms[data.game_room] < 1) {
-      delete game_rooms[data.game_room]
-    }
-    io.sockets.emit('game_rooms', game_rooms)
+    leave_game(socket, data)
   })
 
 	// cards have been updated on one client
@@ -65,10 +75,12 @@ io.on('connection', (socket) => {
 	})
 
 	socket.on('disconnect', () => { 
-		console.log("client disconnected") 
+		// console.log("client disconnected") 
 	})
 })
 
+
+/* Websocket technical stuff */
 app.set('socketio', io); 
 app.set('server', server);
 var whitelist = ['https://concept-35ade.firebaseapp.com', 'localhost:8080'];
