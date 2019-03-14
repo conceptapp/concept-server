@@ -6,11 +6,7 @@ game_rooms = {
 	count of players: int
 	}
 
-CREATE TABLE game_rooms (
- id serial PRIMARY KEY,
- name VARCHAR (40),
- count INTEGER
-);
+CREATE TABLE game_rooms (  id serial PRIMARY KEY,  name VARCHAR (40),  count INTEGER);
 
 clients = {
 	id (socket_id): text	
@@ -18,20 +14,9 @@ clients = {
 	game_room_id: foreign key of game_rooms
 	}
 
-CREATE TABLE clients (
- id serial PRIMARY KEY,
- socket_id CHAR TEXT,
- game_room_name VARCHAR (40),
- game_room_id TEXT
-);
+CREATE TABLE clients (  id serial PRIMARY KEY,  socket_id TEXT, game_room_name VARCHAR (40),  game_room_id TEXT);
 
-INSERT INTO clients (socket_id, game_room_name, game_room_id)
-VALUES
- (
- 'socket_id_02980973',
- 'La partie de Max',
- 'game_room_id_09898798'
-);
+INSERT INTO clients (socket_id, game_room_name, game_room_id) VALUES  ( 'socket_id_02980973',  'La partie de Max',  'game_room_id_09898798' );
 
 */
 

@@ -1,138 +1,86 @@
-// app.js
-var express    = require('express');
-var app        = express();
-var cors = require('cors');
-var bodyParser = require('body-parser');
-var port       = process.env.PORT || 5000; 
+var express = require("express");
+var bodyParser = require("body-parser");
+var mongodb = require("mongodb");
+var ObjectID = mongodb.ObjectID;
 
-// Attaching socket.io
-var server = require('http').createServer(app);
-var io = require('socket.io')(server);
+var CONTACTS_COLLECTION = "contacts";
 
-/* Connect the database */
-const { Pool } = require('pg');
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: true
+var app = express();
+app.use(bodyParser.json());
+
+// Create a database variable outside of the database connection callback to reuse the connection pool in your app.
+var db;
+
+// Connect to the database before starting the application server.
+mongodb.MongoClient.connect(process.env.MONGODB_URI || "mongodb://localhost:27017/test", function (err, client) {
+  if (err) {
+    console.log(err);
+    process.exit(1);
+  }
+
+  // Save database object from the callback for reuse.
+  db = client.db();
+  console.log("Database connection ready");
+
+  // Initialize the app.
+  var server = app.listen(process.env.PORT || 8080, function () {
+    var port = server.address().port;
+    console.log("App now running on port", port);
+  });
 });
 
 
-// create tables
-express()
-  .get('/db', async (req, res) => {
-    try {
-      const client = await pool.connect()
-      const result = await client.query('SELECT * FROM test_table');
-      const results = { 'results': (result) ? result.rows : null};
-      res.render('pages/db', results );
-      client.release();
-    } catch (err) {
-      console.error(err);
-      res.send("Error " + err);
-    }
-  })
-  .get('/db2', async (req, res) => {
-  try {
-    var myQuery = 'CREATE TABLE game_rooms (id serial PRIMARY KEY, name VARCHAR (40), count INTEGER);'
-    const client = await pool.connect()
-    const result = await client.query(myQuery);
-    const results = { 'results': (result) ? result.rows : null};
-    res.send('Result of db query: ', results );
-    client.release();
-  } catch (err) {
-    console.error(err);
-    res.send("Error " + err);
-  }
-})
-  .get('/', (req, res) => res.send('just working'))
-  .listen(port, () => console.log(`Listening on ${ port }`))
+// CONTACTS API ROUTES BELOW
 
-
-/* Concept server real logic */
-var clients = [];
-var game_rooms = {};
-
-function join_game (socket, data) {
-  console.log('joining game: ', data)
-  // current client (socket) is joining the game room
-  clients[socket.id]['game_room'] = data
-  socket.join(data)
-  // one more player in the room
-  game_rooms[data]++
-  io.sockets.emit('update_game_rooms', game_rooms)
+// Generic error handler used by all endpoints.
+function handleError(res, reason, message, code) {
+  console.log("ERROR: " + reason);
+  res.status(code || 500).json({"error": message});
 }
 
-function leave_game (socket, data) {
-  // current client (socket) is leaving the game room
-  socket.leave(clients[socket.id]['game_room'])
-  clients[socket.id]['game_room'] = ''
-  // remove a player from the room and delete room if no more players
-  game_rooms[data]--
-  if (game_rooms[data] < 1) {
-    delete game_rooms[data]
-  }
-  io.sockets.emit('update_game_rooms', game_rooms)
-}
+/*  "/api/contacts"
+ *    GET: finds all contacts
+ *    POST: creates a new contact
+ */
 
-io.on('connection', (socket) => {
-	// console.log("client connected")
-	console.log(socket.id)
-	clients[socket.id] = { }
-  // io.sockets.emit('update_game_rooms', game_rooms)
-  io.to(socket.id).emit('update_game_rooms', game_rooms)
-
-	socket.on('create_game', (data) => {
-		console.log('creating game: ', data)
-    // append the game_room to the array if doesn't exist yet
-    if (data in game_rooms) {
-      join_game(socket, data)
+app.get("/api/contacts", function(req, res) {
+  db.collection(CONTACTS_COLLECTION).find({}).toArray(function(err, docs) {
+    if (err) {
+      handleError(res, err.message, "Failed to get contacts.");
     } else {
-      // initiate the counter of clients to 1
-      game_rooms[data] = 1
-      clients[socket.id]['game_room'] = data
-      socket.join(data)
+      res.status(200).json(docs);
     }
-    console.log('game rooms: ', game_rooms)
-		io.sockets.emit('update_game_rooms', game_rooms)
-	})
+  });
+});
 
-  socket.on('join_game', (data) => {
-    console.log('called socket joined game: ', data)
-    join_game(socket, data)
-  })
+app.post("/api/contacts", function(req, res) {
+  var newContact = req.body;
+  newContact.createDate = new Date();
 
-  socket.on('leave_game', (data) => {
-    console.log('called socket leave game: ', data)
-    leave_game(socket, data)
-  })
+  if (!req.body.name) {
+    handleError(res, "Invalid user input", "Must provide a name.", 400);
+  } else {
+    db.collection(CONTACTS_COLLECTION).insertOne(newContact, function(err, doc) {
+      if (err) {
+        handleError(res, err.message, "Failed to create new contact.");
+      } else {
+        res.status(201).json(doc.ops[0]);
+      }
+    });
+  }
+});
 
-	// cards have been updated on one client
-	socket.on('update_cards_from_client', (data) => {
-		console.log('update_cards from client: ', data)
-    io.to(data.game_room).emit('update_cards_from_server', data)
-	})
+/*  "/api/contacts/:id"
+ *    GET: find contact by id
+ *    PUT: update contact by id
+ *    DELETE: deletes contact by id
+ */
 
-	socket.on('disconnect', () => { 
-		// console.log("client disconnected") 
-	})
-})
+app.get("/api/contacts/:id", function(req, res) {
+});
 
+app.put("/api/contacts/:id", function(req, res) {
+});
 
-/* Websocket technical stuff */
-app.set('socketio', io); 
-app.set('server', server);
-var whitelist = ['https://concept-35ade.firebaseapp.com', 'localhost:8080'];
-var corsOptions = {
- origin: function(origin, callback){
-   var originIsWhitelisted = whitelist.indexOf(origin) !== -1;
-   callback(null, originIsWhitelisted);
- }
-};
-
-app.use(cors(corsOptions));
-
-// configure body parser
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(bodyParser.json());
-
-// app.get('server').listen(port);
+app.delete("/api/contacts/:id", function(req, res) {
+});
