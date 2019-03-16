@@ -62,10 +62,11 @@ function create_game (socket, data) {
   GamesModel
     .findOneAndUpdate(
       {
-        name: data    // query
+        name: data.currentGameRoom    // query
       },
       {
-        name: data,
+        name: data.currentGameRoom,
+        guess_cards: data.guessCards,
         $inc: {count: 1}    // field update
       },
       {
@@ -106,28 +107,31 @@ function join_game (socket, data, increaseCount) {
       })
   // add the client to the socket to get cards updates
   socket.join(data)
-  // update current cards to all the connected clients
-  update_cards_from_server(socket, data)
-  // one more player in the room
-  if (increaseCount) {
-    GamesModel
-      .findOneAndUpdate(
-        {
-          name: data    // query
-        },
-        {
-          // name: data,
-          $inc: {count: 1}    // field update
-        },
-        {
-          new: true           // return updated document
-        })
-      .then(doc => { 
-        console.log('increase count ok: ', doc) 
-        send_updated_game_rooms()
+  // one more player in the room ?
+  var increase = increaseCount ? 1 : 0
+  GamesModel
+    .findOneAndUpdate(
+      {
+        name: data    // query
+      },
+      {
+        // name: data,
+        $inc: {count: increase}    // field update
+      },
+      {
+        new: true           // return updated document
       })
-      .catch(err => { console.error(err) })
-  }
+    .then(doc => { 
+      console.log('increase count ok: ', doc) 
+      send_updated_game_rooms()
+      // update current cards to all the connected clients
+      var data2 = {
+        currentGameRoom: doc.name,
+        guessCards: doc.guess_cards
+      }
+      update_cards_from_server(socket, data2)
+    })
+    .catch(err => { console.error(err) })
 }
 
 function leave_game (socket, data) {
@@ -178,6 +182,7 @@ function send_updated_game_rooms (socketId) {
 
 function update_cards_from_server(socket, data) {
   // update Game room with the cards and push the info to the clients
+  console.log('update cards from server: ', data)
   GamesModel
   .findOneAndUpdate(
     {
