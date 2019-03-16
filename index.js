@@ -17,35 +17,6 @@ var io = require('socket.io')(server);
 let ClientsModel = require('./models/clients')
 let GamesModel = require('./models/game_rooms')
 
-// let client = new ClientsModel({
-//   socket_id: 'test socket_id',
-//   game_roome_name: 'la Partie de Mongo DB'
-// })
-// console.log("midddle")
-// client.save()
-//   .then(doc => {
-//     console.log("Success")
-//     console.log(doc)
-//   })
-//   .catch(err => {
-//     console.error(err)
-//  })
-
-// ClientsModel
-// 	.find({
-//     game_roome_name: 'la Partie de Mongo DB'   // search query
-// 	})
-// 	.then(doc => {
-//     console.log(doc)
-// 	})
-// 	.catch(err => {
-// 	  console.error(err)
-// 	})
-
-/* Concept server real logic */
-// var clients = [];
-// var game_rooms = {};
-
 function game_update(game_room_name, increaseOrDecrease) {
   if (increaseOrDecrease == 'increase') {
     var increase = 1
@@ -67,8 +38,7 @@ function game_update(game_room_name, increaseOrDecrease) {
       console.log('game update: ', doc)
       // if no more users in the room, delete game room
       if (doc.count < 1) {
-        // TODO delete game_room
-        // delete game_rooms[data]
+        // delete game room document
         console.log('game room has no more players')
         doc.remove(function (err) {
             // if no error, doc is removed
@@ -95,7 +65,7 @@ function create_game (socket, data) {
         name: data    // query
       },
       {
-        // name: data,
+        name: data,
         $inc: {count: 1}    // field update
       },
       {
@@ -106,16 +76,6 @@ function create_game (socket, data) {
       console.log('game created successfully: ', doc)
       // update the client database with the room
       join_game(socket, data)
-
-      // check if doc.updatedExisting is true ?
-
-      // append the game_room to the array if doesn't exist yet
-      // if (data == game_room[name]) {
-      //   join_game(socket, data)
-      // } else {
-      //   // clients[socket.id]['game_room'] = data
-      // }
-      // console.log('game rooms: ', game_rooms)
       send_updated_game_rooms()
     })
     .catch(err => {
@@ -125,13 +85,6 @@ function create_game (socket, data) {
 
 function join_game (socket, data, increaseCount) {
   console.log('joining game: ', data, increaseCount)
-  // current client (socket) is joining the game room
-  // clients[socket.id]['game_room'] = data
-  // let client = new ClientsModel({
-  //   socket_id: socket.id,
-  //   game_roome_name: data
-  // })
-  // client.save()
   ClientsModel
     .findOneAndUpdate(
       {
@@ -139,7 +92,7 @@ function join_game (socket, data, increaseCount) {
       },
       {
         socket_id: socket.id,
-        game_roome_name: data       // field update
+        game_room_name: data       // field update
       },
       {
         upsert: true,
@@ -155,30 +108,28 @@ function join_game (socket, data, increaseCount) {
   socket.join(data)
   // one more player in the room
   if (increaseCount) {
-    // game_rooms[data]++
-      GamesModel
-        .findOneAndUpdate(
-          {
-            name: data    // query
-          },
-          {
-            // name: data,
-            $inc: {count: 1}    // field update
-          },
-          {
-            new: true           // return updated document
-          })
-        .then(doc => { 
-          console.log('increase count ok: ', doc) 
-          send_updated_game_rooms()
+    GamesModel
+      .findOneAndUpdate(
+        {
+          name: data    // query
+        },
+        {
+          // name: data,
+          $inc: {count: 1}    // field update
+        },
+        {
+          new: true           // return updated document
         })
-        .catch(err => { console.error(err) })
+      .then(doc => { 
+        console.log('increase count ok: ', doc) 
+        send_updated_game_rooms()
+      })
+      .catch(err => { console.error(err) })
   }
 }
 
 function leave_game (socket, data) {
   // current client (socket) is leaving the game room
-  // clients[socket.id]['game_room'] = ''
   ClientsModel
     .findOneAndUpdate(
       {
@@ -249,8 +200,30 @@ io.on('connection', (socket) => {
   // cards have been updated on one client
   socket.on('update_cards_from_client', (data) => {
     console.log('update_cards from client: ', data)
-    // io.to(data.game_room).emit('update_cards_from_server', data)
-    send_updated_game_rooms()
+    //   'currentGameRoom': this.sharedState.currentGameRoom,
+    //   'guessCards': this.sharedState.guessCards
+    // // io.to(data.game_room).emit('update_cards_from_server', data)
+    // store current guess cards and update connected clients
+    GamesModel
+      .findOneAndUpdate(
+        {
+          name: data.currentGameRoom    // query
+        },
+        {
+          guess_cards: data.guessCards
+        },
+        {
+          new: true 
+        })
+      .then(doc => {
+        console.log('game updated successfully: ', doc)
+        // update the client database with the room
+        // send_updated_game_rooms()
+        io.to(doc.name).emit('update_cards_from_server', data)
+      })
+      .catch(err => {
+        console.error(err)
+      })
   })
 
   socket.on('disconnect', () => { 
@@ -262,7 +235,8 @@ io.on('connection', (socket) => {
       })
       .then(doc => {
         console.log('client removed sucessfully: ', doc)
-        // TODO Add decrease
+        // remove a player from the room and delete room if no more players
+        game_update(doc.game_room_name, 'decrease')
       })
       .catch(err => {
         console.error(err)

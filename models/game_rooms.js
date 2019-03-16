@@ -8,7 +8,8 @@ let game_rooms = new mongoose.Schema({
   count: {
   	type: Number,
   	default: 0
-  }
+  },
+  guess_cards: Object
 })
 module.exports = mongoose.model('Game_rooms', game_rooms)
 
