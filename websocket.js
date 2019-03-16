@@ -12,9 +12,9 @@ var server = require('http').createServer(app);
 var io = require('socket.io')(server);
 
 /* Connect the database */
-require('./database')
-let ClientsModel = require('./models/clients')
-let GamesModel = require('./models/game_rooms')
+// require('./database')
+// let ClientsModel = require('./models/clients')
+// let GamesModel = require('./models/game_rooms')
 
 // let client = new ClientsModel({
 //   socket_id: 'test socket_id',
@@ -48,17 +48,17 @@ function join_game (socket, data) {
   console.log('joining game: ', data)
   // current client (socket) is joining the game room
   clients[socket.id]['game_room'] = data
-  let client = new ClientsModel({
-    socket_id: socket.id,
-    game_roome_name: data
-  })
-  client.save()
-    .then(doc => {
-      console.log(doc)
-    })
-    .catch(err => {
-      console.error(err)
-   })
+  // let client = new ClientsModel({
+  //   socket_id: socket.id,
+  //   game_roome_name: data
+  // })
+  // client.save()
+  //   .then(doc => {
+  //     console.log(doc)
+  //   })
+  //   .catch(err => {
+  //     console.error(err)
+  //  })
   // add the client to the socket to get cards updates
   socket.join(data)
   // one more player in the room
@@ -79,14 +79,14 @@ function leave_game (socket, data) {
 }
 
 io.on('connection', (socket) => {
-	// console.log("client connected")
-	console.log(socket.id)
-	clients[socket.id] = { }
+  // console.log("client connected")
+  console.log(socket.id)
+  clients[socket.id] = { }
   // io.sockets.emit('update_game_rooms', game_rooms)
   io.to(socket.id).emit('update_game_rooms', game_rooms)
 
-	socket.on('create_game', (data) => {
-		console.log('creating game: ', data)
+  socket.on('create_game', (data) => {
+    console.log('creating game: ', data)
     // append the game_room to the array if doesn't exist yet
     if (data in game_rooms) {
       join_game(socket, data)
@@ -97,8 +97,8 @@ io.on('connection', (socket) => {
       socket.join(data)
     }
     console.log('game rooms: ', game_rooms)
-		io.sockets.emit('update_game_rooms', game_rooms)
-	})
+    io.sockets.emit('update_game_rooms', game_rooms)
+  })
 
   socket.on('join_game', (data) => {
     console.log('called socket joined game: ', data)
@@ -110,15 +110,15 @@ io.on('connection', (socket) => {
     leave_game(socket, data)
   })
 
-	// cards have been updated on one client
-	socket.on('update_cards_from_client', (data) => {
-		console.log('update_cards from client: ', data)
+  // cards have been updated on one client
+  socket.on('update_cards_from_client', (data) => {
+    console.log('update_cards from client: ', data)
     io.to(data.game_room).emit('update_cards_from_server', data)
-	})
+  })
 
-	socket.on('disconnect', () => { 
-		// console.log("client disconnected") 
-	})
+  socket.on('disconnect', () => { 
+    // console.log("client disconnected") 
+  })
 })
 
 
