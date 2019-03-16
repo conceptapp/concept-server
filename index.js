@@ -106,6 +106,8 @@ function join_game (socket, data, increaseCount) {
       })
   // add the client to the socket to get cards updates
   socket.join(data)
+  // update current cards to all the connected clients
+  update_cards_from_server(socket, data)
   // one more player in the room
   if (increaseCount) {
     GamesModel
@@ -174,6 +176,29 @@ function send_updated_game_rooms (socketId) {
     })
 }
 
+function update_cards_from_server(socket, data) {
+  // update Game room with the cards and push the info to the clients
+  GamesModel
+  .findOneAndUpdate(
+    {
+      name: data.currentGameRoom    // query
+    },
+    {
+      guess_cards: data.guessCards
+    },
+    {
+      new: true 
+    })
+  .then(doc => {
+    console.log('game updated successfully: ', doc)
+    // update the client database with the room
+    io.to(doc.name).emit('update_cards_from_server', data)
+  })
+  .catch(err => {
+    console.error(err)
+  })
+}
+
 io.on('connection', (socket) => {
   console.log('client connected: ', socket.id)
   // clients[socket.id] = { }
@@ -200,30 +225,8 @@ io.on('connection', (socket) => {
   // cards have been updated on one client
   socket.on('update_cards_from_client', (data) => {
     console.log('update_cards from client: ', data)
-    //   'currentGameRoom': this.sharedState.currentGameRoom,
-    //   'guessCards': this.sharedState.guessCards
-    // // io.to(data.game_room).emit('update_cards_from_server', data)
     // store current guess cards and update connected clients
-    GamesModel
-      .findOneAndUpdate(
-        {
-          name: data.currentGameRoom    // query
-        },
-        {
-          guess_cards: data.guessCards
-        },
-        {
-          new: true 
-        })
-      .then(doc => {
-        console.log('game updated successfully: ', doc)
-        // update the client database with the room
-        // send_updated_game_rooms()
-        io.to(doc.name).emit('update_cards_from_server', data)
-      })
-      .catch(err => {
-        console.error(err)
-      })
+    update_cards_from_server(socket, data)
   })
 
   socket.on('disconnect', () => { 

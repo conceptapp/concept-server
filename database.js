@@ -3,14 +3,14 @@
 let mongoose = require('mongoose');
 
 // local connection
-const server = '127.0.0.1:27017'; // REPLACE WITH YOUR DB SERVER
-const database = 'conceptdb';      // REPLACE WITH YOUR DB NAME
+// const server = '127.0.0.1:27017'; // REPLACE WITH YOUR DB SERVER
+// const database = 'conceptdb';      // REPLACE WITH YOUR DB NAME
 // const url = `mongodb://${server}/${database}`
 // heroku server
-const url = `mongodb+srv://dbUser:dbUserPassword@cluster0-pulfz.mongodb.net/${database}?retryWrites=true`
+// const url = `mongodb+srv://dbUser:dbUserPassword@cluster0-pulfz.mongodb.net/${database}?retryWrites=true`
 // mongodb+srv://dbUser:dbUserPassword@cluster0-pulfz.mongodb.net/test?retryWrites=true
 // mongodb+srv://dbUser:<password>@cluster0-pulfz.mongodb.net/test?retryWrites=true
-
+const url = process.env.DATABASE_URL
 
 class Database {
   constructor() {
