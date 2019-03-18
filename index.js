@@ -67,6 +67,7 @@ function create_game (socket, data) {
       {
         name: data.currentGameRoom,
         guess_cards: data.guessCards,
+        mode: data.gameMode,
         $inc: {count: 1}    // field update
       },
       {
@@ -165,7 +166,10 @@ function send_updated_game_rooms (socketId) {
     .then(doc => {
       var game_rooms = {}
       doc.forEach( function(el, i) {
-        game_rooms[el.name] = el.count
+        game_rooms[el.name] = {
+          count: el.count,
+          mode: el.mode
+        }
       })
       // if socketId is not defined, broadcast to all the connected clients
       if (socketId == undefined) {

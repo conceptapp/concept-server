@@ -9,7 +9,8 @@ let game_rooms = new mongoose.Schema({
   	type: Number,
   	default: 0
   },
-  guess_cards: Object
+  guess_cards: Object,
+  mode: String
 })
 module.exports = mongoose.model('Game_rooms', game_rooms)
 
