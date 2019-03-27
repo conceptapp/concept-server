@@ -4,6 +4,7 @@ let clientsSchema = new mongoose.Schema({
   	type:  String,
   	unique: true
   },
+  player_name: String,
   game_room_name: String,
   game_room_id: mongoose.Schema.Types.ObjectId
 })
