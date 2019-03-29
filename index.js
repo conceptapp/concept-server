@@ -247,6 +247,20 @@ function upsert_board (socket, data) {
     })
 }
 
+function get_boards (socket, data) {
+  // create a new board or update if same player with same words (upsert true to create if doesn't exist)
+ BoardsModel
+  .find()
+  .then(doc => {
+      // send back info that it worked
+      console.log('found boards', doc)
+      io.to(socket.id).emit('boards_info', doc)
+    })
+    .catch(err => {
+      console.error(err)
+    })
+}
+
 io.on('connection', (socket) => {
   console.log('client connected?: ', socket.id)
   // clients[socket.id] = { }
@@ -282,6 +296,12 @@ io.on('connection', (socket) => {
     console.log('upsert board: ', data)
     // store current guess cards and update connected clients
     upsert_board(socket, data)
+  })
+
+  // send boards to the requesting client
+  socket.on('get_boards', (data) => {
+    console.log('getting boards', data)
+    get_boards(socket, data)
   })
 
   socket.on('disconnect', () => { 
