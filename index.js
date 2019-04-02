@@ -251,6 +251,30 @@ function upsert_board (socket, data) {
     })
 }
 
+function update_board_variants (socket, data) {
+  // create a new board or update if same player with same words (upsert true to create if doesn't exist)
+  BoardsModel
+    .findOneAndUpdate(
+      {
+        creator: data.creator,    // query
+        word: data.word
+      },
+      {
+        word_variants: data.word_variants,
+      },
+      {
+        new: true // return updated document
+      })
+    .then(doc => {
+      console.log('board variants updated successfully: ', doc)
+      // send back info that it worked
+      io.to(socket.id).emit('board_created')
+    })
+    .catch(err => {
+      console.error(err)
+    })
+}
+
 function get_boards (socket, data) {
   // create a new board or update if same player with same words (upsert true to create if doesn't exist)
  BoardsModel
@@ -300,6 +324,13 @@ io.on('connection', (socket) => {
     console.log('upsert board: ', data)
     // store current guess cards and update connected clients
     upsert_board(socket, data)
+  })
+
+  // player wants to create a new board or update one
+  socket.on('update_board_variants', (data) => {
+    console.log('update_board_variants: ', data)
+    // store current guess cards and update connected clients
+    update_board_variants(socket, data)
   })
 
   // send boards to the requesting client
