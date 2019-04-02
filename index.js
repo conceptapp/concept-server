@@ -72,6 +72,8 @@ function create_game (socket, data) {
       },
       {
         name: data.currentGameRoom,
+        creator: data.player,
+        creator_email: data.playerEmail,
         guess_cards: data.guessCards,
         mode: data.gameMode,
         $inc: {count: 1}    // field update
@@ -168,7 +170,6 @@ function leave_game (socket, data) {
 }
 
 function send_updated_game_rooms (args) {
-  console.log('send_updated_game_rooms: ', args)
   GamesModel
     .find()
     .then(doc => {
@@ -176,11 +177,13 @@ function send_updated_game_rooms (args) {
       doc.forEach( function(el, i) {
         game_rooms[el.name] = {
           count: el.count,
-          mode: el.mode
+          mode: el.mode,
+          creator_email: el.creator_email
         }
       })
       // append game_rooms to args to keep if player joined or left
       args['game_rooms'] = game_rooms
+      console.log('send_updated_game_rooms: ', args)
       // if socketId is not defined, broadcast to all the connected clients
       if ('socketId' in args) {
           io.to(args['socketId']).emit('update_game_rooms', args)
@@ -219,7 +222,7 @@ function update_cards_from_server(socket, data) {
 
 function upsert_board (socket, data) {
   // create a new board or update if same player with same words (upsert true to create if doesn't exist)
- BoardsModel
+  BoardsModel
     .findOneAndUpdate(
       {
         creator: data.creator,    // query
@@ -231,6 +234,7 @@ function upsert_board (socket, data) {
         word_variants: data.word_variants,
         guess_cards: data.guess_cards,
         difficulty: data.difficulty,
+        $push: { players: data.player }
       },
       {
         upsert: true,

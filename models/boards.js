@@ -8,8 +8,9 @@ let boardsSchema = new mongoose.Schema({
   // created_date: Date,
   players: [{ // player who played the board >> [playerName, boolean if found the right word, time spent already, last time played]
     playerName: String,
+    playerEmail: String,
     found: Boolean,
-    timeSpent: Number, // in seconds
+    timeSpent: Number, // in milliseconds
     lastPlayed: Date
   }]  
 },

@@ -9,6 +9,8 @@ let game_rooms = new mongoose.Schema({
   	type: Number,
   	default: 0
   },
+  creator: String,
+  creator_email: String,
   guess_cards: Object,
   mode: String
 })
