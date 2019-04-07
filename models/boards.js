@@ -10,6 +10,7 @@ let boardsSchema = new mongoose.Schema({
     playerName: String,
     playerEmail: String,
     found: Boolean,
+    gaveUp: Boolean,
     timeSpent: Number, // in milliseconds
     lastPlayed: Date
   }]  
