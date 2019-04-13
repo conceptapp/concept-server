@@ -5,14 +5,25 @@ let game_rooms = new mongoose.Schema({
   	type: String,
   	unique: true
   },
-  count: {
-  	type: Number,
-  	default: 0
-  },
+  // count: {
+  // 	type: Number,
+  // 	default: 0
+  // },
   creator: String,
   creator_email: String,
   guess_cards: Object,
-  mode: String
+  mode: String,
+  players: [{
+    socketId: String,
+    name: String,
+    avatarUrl: String,
+    isGod: Boolean
+  }],
+  chat: [{  // array of message objects
+    author: String,
+    messageData: Object,
+    messageType: String
+  }]
 })
 module.exports = mongoose.model('Game_rooms', game_rooms)
 

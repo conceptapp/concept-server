@@ -5,8 +5,8 @@ let clientsSchema = new mongoose.Schema({
   	unique: true
   },
   player_name: String,
-  game_room_name: String,
-  game_room_id: mongoose.Schema.Types.ObjectId
+  // game_room_name: String,
+  // game_room_id: mongoose.Schema.Types.ObjectId
 })
 module.exports = mongoose.model('Clients', clientsSchema)
 
