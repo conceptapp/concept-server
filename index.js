@@ -57,6 +57,7 @@ function join_game (socket, data) {
   var player = {
     socketId: socket.id,
     name: data.playerName,
+    chatId: data.chatId,
     avatarUrl: '',
     isGod: true
   }
@@ -174,8 +175,8 @@ function update_cards_from_server(socket, data) {
 function chat_new_message(socket, data) {
   // append new message to the game room and send updates to all the connected players
   var message = {
-    'author': socket.id,
-    'authorEmail': data.message.authorEmail,
+    'author': data.message.author,
+    // 'authorEmail': data.message.authorEmail,
     'messageData': data.message.data,
     'messageType': data.message.type
   }
@@ -194,9 +195,7 @@ function chat_new_message(socket, data) {
     .then(doc => {
       // console.log('new message append successfully', doc, message, data)
       // send back the new message to all the clients
-      var returned_message = data
-      returned_message['message']['author'] = socket.id
-      io.to(doc.name).emit('chat_new_message_from_server', returned_message)
+      io.to(doc.name).emit('chat_new_message_from_server', data)
       return doc
     })
     .catch(err => {

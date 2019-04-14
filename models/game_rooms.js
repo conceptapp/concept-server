@@ -16,6 +16,7 @@ let game_rooms = new mongoose.Schema({
   players: [{
     socketId: String,
     name: String,
+    chatId: String,
     avatarUrl: String,
     isGod: Boolean
   }],
